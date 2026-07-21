@@ -64,10 +64,4 @@ function M.parseIso8601(value)
     return epochFromParts(tonumber(y), tonumber(mo), tonumber(d), tonumber(h), tonumber(mi), tonumber(s)) + fraction - offsetSeconds
 end
 
-function M.formatUtc(epoch)
-    if not epoch then return "—" end
-    -- os.date with ! is UTC and is used only for display, not conversion.
-    return os.date("!%Y-%m-%d %H:%M:%S", math.floor(epoch)) .. "Z"
-end
-
 return M

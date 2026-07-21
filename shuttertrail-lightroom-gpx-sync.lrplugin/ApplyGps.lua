@@ -20,19 +20,19 @@ function M.apply(catalog, results, replaceExisting, progress)
         catalog:withWriteAccessDo("shuttertrail-lightroom-gpx-sync", function()
             for index = first, last do
                 local item = pending[index]
-                if item then
-                    local ok, err = pcall(function()
-                        item.record.photo:setRawMetadata("gps", {
-                            latitude = item.match.latitude,
-                            longitude = item.match.longitude,
-                        })
-                        if item.match.altitude then
-                            item.record.photo:setRawMetadata("gpsAltitude", item.match.altitude)
-                        end
-                    end)
-                    if ok then applied = applied + 1
-                    else failed[#failed + 1] = item.record.fileName .. ": " .. tostring(err) end
-                end
+                local ok, err = pcall(function()
+                    item.record.photo:setRawMetadata("gps", {
+                        latitude = item.match.latitude,
+                        longitude = item.match.longitude,
+                    })
+                    if item.match.altitude then
+                        item.record.photo:setRawMetadata("gpsAltitude", item.match.altitude)
+                    elseif replaceExisting then
+                        item.record.photo:setRawMetadata("gpsAltitude", nil)
+                    end
+                end)
+                if ok then applied = applied + 1
+                else failed[#failed + 1] = item.record.fileName .. ": " .. tostring(err) end
             end
         end, { timeout = 60 })
         if progress then

@@ -9,8 +9,4 @@ function M.info(message)
     logger:info(tostring(message))
 end
 
-function M.error(message)
-    logger:error(tostring(message))
-end
-
 return M

@@ -8,7 +8,7 @@ local GpxParser = require "GpxParser"
 local Logger = require "Logger"
 local Matcher = require "Matcher"
 local MetadataReader = require "MetadataReader"
-local OffsetDialog = require "OffsetDialog"
+local OffsetResolver = require "OffsetResolver"
 local PreviewDialog = require "PreviewDialog"
 local TimeUtil = require "TimeUtil"
 
@@ -36,33 +36,9 @@ local function chooseGpxFiles()
     }
 end
 
-local function validEmbeddedOffset(value)
-    if not value then return nil end
-    return TimeUtil.normalizeOffset(value)
-end
-
-local function summarizeDetectedOffsets(records)
-    local counts = {}
-    for _, record in ipairs(records) do
-        local offset = validEmbeddedOffset(record.embeddedOffset)
-        if offset then counts[offset] = (counts[offset] or 0) + 1 end
-    end
-
-    local summary = {}
-    for offset, count in pairs(counts) do
-        summary[#summary + 1] = { offset = offset, count = count }
-    end
-    table.sort(summary, function(left, right)
-        if left.count ~= right.count then return left.count > right.count end
-        return left.offset < right.offset
-    end)
-    return summary, summary[1] and summary[1].offset or nil
-end
-
 local function calculateResults(records, points, progress)
     local results = {}
-    local globalOffset, cameraOffsets, skipRemaining = nil, {}, false
-    local offsetSummary, mostDetectedOffset = summarizeDetectedOffsets(records)
+    local offsets = OffsetResolver.new(records)
 
     for index, record in ipairs(records) do
         if progress and progress:isCanceled() then return nil, true end
@@ -71,31 +47,7 @@ local function calculateResults(records, points, progress)
             progress:setPortionComplete(90 + 5 * index / math.max(1, #records), 100)
             LrTasks.yield()
         end
-        local offset = validEmbeddedOffset(record.embeddedOffset)
-        local offsetSource = offset and ("EXIF " .. offset) or nil
-
-        if not offset then
-            if mostDetectedOffset then
-                offset = mostDetectedOffset
-                offsetSource = "most detected " .. mostDetectedOffset
-            elseif globalOffset then
-                offset, offsetSource = globalOffset, "user (all) " .. globalOffset
-            elseif cameraOffsets[record.cameraKey] then
-                offset = cameraOffsets[record.cameraKey]
-                offsetSource = "user (camera) " .. offset
-            elseif not skipRemaining then
-                local selected, scope = OffsetDialog.ask(
-                    record, #records - index + 1, mostDetectedOffset)
-                if selected then
-                    offset = selected
-                    offsetSource = "user " .. selected
-                    if scope == "all" then globalOffset = selected end
-                    if scope == "camera" then cameraOffsets[record.cameraKey] = selected end
-                else
-                    skipRemaining = true
-                end
-            end
-        end
+        local offset, offsetSource = offsets:resolve(record, #records - index + 1)
 
         if not offset then
             results[#results + 1] = { record = record, reason = "no UTC offset supplied" }
@@ -116,7 +68,7 @@ local function calculateResults(records, points, progress)
             end
         end
     end
-    return results, false, offsetSummary
+    return results, false, offsets.summary
 end
 
 LrTasks.startAsyncTask(function()
@@ -185,8 +137,7 @@ LrTasks.startAsyncTask(function()
     end
     progress:setCaption("Waiting for preview confirmation…")
     progress:setPortionComplete(95, 100)
-    local approved, replaceExisting = PreviewDialog.show(
-        results, #gpxPaths, #points, selectionSummary, offsetSummary)
+    local approved, replaceExisting = PreviewDialog.show(results, selectionSummary, offsetSummary)
     if not approved then
         progress:done()
         return

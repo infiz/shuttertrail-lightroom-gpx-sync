@@ -1,15 +1,12 @@
 local LrDialogs = import "LrDialogs"
 local LrView = import "LrView"
 
-local TimeUtil = require "TimeUtil"
-
 local M = {}
 
-function M.show(results, gpxCount, pointCount, selectionSummary, offsetSummary)
+function M.show(results, selectionSummary, offsetSummary)
     local matched, matchedWithExistingLocation = 0, 0
     local withEmbeddedOffset, withoutEmbeddedOffset = 0, 0
     local usingManualOffset, skippedWithoutManualOffset = 0, 0
-    local usingMostDetectedOffset = 0
     for _, item in ipairs(results) do
         if item.match then
             matched = matched + 1
@@ -17,16 +14,13 @@ function M.show(results, gpxCount, pointCount, selectionSummary, offsetSummary)
                 matchedWithExistingLocation = matchedWithExistingLocation + 1
             end
         end
-        if TimeUtil.normalizeOffset(item.record.embeddedOffset) then
+        if item.offsetSource and item.offsetSource:match("^EXIF") then
             withEmbeddedOffset = withEmbeddedOffset + 1
         else
             withoutEmbeddedOffset = withoutEmbeddedOffset + 1
         end
         if item.offsetSource and item.offsetSource:match("^user") then
             usingManualOffset = usingManualOffset + 1
-        end
-        if item.offsetSource and item.offsetSource:match("^most detected") then
-            usingMostDetectedOffset = usingMostDetectedOffset + 1
         end
         if item.reason == "no UTC offset supplied" then
             skippedWithoutManualOffset = skippedWithoutManualOffset + 1
@@ -81,18 +75,9 @@ function M.show(results, gpxCount, pointCount, selectionSummary, offsetSummary)
         f:static_text { title = "Photo time offsets", font = "<system/bold>" },
         countRow("With an offset stored in the photo", withEmbeddedOffset),
         countRow("Without an offset stored in the photo", withoutEmbeddedOffset),
-<<<<<<< HEAD
-        f:static_text { title = "Detected offsets and counts:" },
-        f:static_text { title = table.concat(detectedOffsetLines, "\n"), width = 440 },
-        countRow("Using the most detected offset", usingMostDetectedOffset),
-        countRow("Using an offset you entered", usingManualOffset),
-||||||| parent of ae72682 (Suggest detected offsets for missing metadata)
-        countRow("Using an offset you entered", usingManualOffset),
-=======
         f:static_text { title = "Detected offsets and counts:" },
         f:static_text { title = table.concat(detectedOffsetLines, "\n"), width = 440 },
         countRow("Using an offset confirmed in the prompt", usingManualOffset),
->>>>>>> ae72682 (Suggest detected offsets for missing metadata)
         countRow("Skipped because no offset was provided", skippedWithoutManualOffset),
 
         f:static_text { title = " " },
