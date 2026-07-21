@@ -1,4 +1,6 @@
+local LrBinding = import "LrBinding"
 local LrDialogs = import "LrDialogs"
+local LrFunctionContext = import "LrFunctionContext"
 local LrView = import "LrView"
 
 local M = {}
@@ -48,62 +50,90 @@ function M.show(results, selectionSummary, offsetSummary)
         detectedOffsetLines[1] = "No embedded offsets detected"
     end
 
-    local f = LrView.osFactory()
-    local function countRow(label, count, bold)
-        return f:row {
+    local approved, replaceExisting = false, false
+    LrFunctionContext.callWithContext("shuttertrail-lightroom-gpx-sync-preview-dialog", function(context)
+        local props = LrBinding.makePropertyTable(context)
+        props.existingLocationAction = "preserve"
+
+        local f = LrView.osFactory()
+        local function countRow(label, count, bold)
+            return f:row {
+                spacing = f:control_spacing(),
+                f:static_text { title = label, width = 380 },
+                f:static_text {
+                    title = tostring(count),
+                    width = 60,
+                    alignment = "right",
+                    font = bold and "<system/bold>" or nil,
+                },
+            }
+        end
+
+        local actionChoice = f:static_text {
+            title = "No matched photos have an existing location.",
+        }
+        if matchedWithExistingLocation > 0 then
+            actionChoice = f:column {
+                bind_to_object = props,
+                spacing = f:control_spacing(),
+                f:radio_button {
+                    title = "Preserve existing locations",
+                    value = LrView.bind("existingLocationAction"),
+                    checked_value = "preserve",
+                },
+                f:radio_button {
+                    title = "Replace existing locations",
+                    value = LrView.bind("existingLocationAction"),
+                    checked_value = "replace",
+                },
+            }
+        end
+
+        local contents = f:column {
             spacing = f:control_spacing(),
-            f:static_text { title = label, width = 380 },
+            width = 470,
+
+            f:static_text { title = "Selected files", font = "<system/bold>" },
+            countRow("Total files selected", selectionSummary.totalSelected),
+            countRow("Photos", selectionSummary.photoCount),
+            countRow("Videos (ignored)", selectionSummary.videoCount),
+
+            f:static_text { title = " " },
+            f:static_text { title = "Photo time offsets", font = "<system/bold>" },
+            countRow("With an offset stored in the photo", withEmbeddedOffset),
+            countRow("Without an offset stored in the photo", withoutEmbeddedOffset),
+            f:static_text { title = "Detected offsets and counts:" },
+            f:static_text { title = table.concat(detectedOffsetLines, "\n"), width = 440 },
+            countRow("Using an offset confirmed in the prompt", usingManualOffset),
+            countRow("Skipped because no offset was provided", skippedWithoutManualOffset),
+
+            f:static_text { title = " " },
+            f:static_text { title = "GPX matching results", font = "<system/bold>" },
+            countRow("Photos with a matching GPX location", matched, true),
+            countRow("Matched photos that already have a location", matchedWithExistingLocation),
+            countRow("Matched photos that do not have a location yet", matchedWithoutExistingLocation, true),
+
+            f:static_text { title = " " },
+            f:static_text { title = "Existing locations", font = "<system/bold>" },
+            actionChoice,
+            countRow("Preserve existing — photos updated", matchedWithoutExistingLocation, true),
+            countRow("Replace existing — photos updated", matched, true),
             f:static_text {
-                title = tostring(count),
-                width = 60,
-                alignment = "right",
-                font = bold and "<system/bold>" or nil,
+                title = "Only matches no more than one hour from a GPX point will be applied.",
             },
         }
-    end
 
-    local contents = f:column {
-        spacing = f:control_spacing(),
-        width = 470,
-
-        f:static_text { title = "Selected files", font = "<system/bold>" },
-        countRow("Total files selected", selectionSummary.totalSelected),
-        countRow("Photos", selectionSummary.photoCount),
-        countRow("Videos (ignored)", selectionSummary.videoCount),
-
-        f:static_text { title = " " },
-        f:static_text { title = "Photo time offsets", font = "<system/bold>" },
-        countRow("With an offset stored in the photo", withEmbeddedOffset),
-        countRow("Without an offset stored in the photo", withoutEmbeddedOffset),
-        f:static_text { title = "Detected offsets and counts:" },
-        f:static_text { title = table.concat(detectedOffsetLines, "\n"), width = 440 },
-        countRow("Using an offset confirmed in the prompt", usingManualOffset),
-        countRow("Skipped because no offset was provided", skippedWithoutManualOffset),
-
-        f:static_text { title = " " },
-        f:static_text { title = "GPX matching results", font = "<system/bold>" },
-        countRow("Photos with a matching GPX location", matched, true),
-        countRow("Matched photos that already have a location", matchedWithExistingLocation),
-        countRow("Matched photos that do not have a location yet", matchedWithoutExistingLocation, true),
-
-        f:static_text { title = " " },
-        f:static_text { title = "What each action will do", font = "<system/bold>" },
-        countRow("Apply and Preserve Existing — photos updated", matchedWithoutExistingLocation, true),
-        countRow("Apply and Replace Existing — photos updated", matched, true),
-        f:static_text {
-            title = "Only matches no more than one hour from a GPX point will be applied.",
-        },
-    }
-
-    local answer = LrDialogs.presentModalDialog {
-        title = "shuttertrail-lightroom-gpx-sync — Preview",
-        contents = contents,
-        actionVerb = "Apply and Preserve Existing",
-        otherVerb = matchedWithExistingLocation > 0 and "Apply and Replace Existing" or nil,
-        cancelVerb = "Cancel",
-        resizable = true,
-    }
-    return answer == "ok" or answer == "other", answer == "other"
+        local answer = LrDialogs.presentModalDialog {
+            title = "shuttertrail-lightroom-gpx-sync — Preview",
+            contents = contents,
+            actionVerb = "Apply",
+            cancelVerb = "Cancel",
+            resizable = true,
+        }
+        approved = answer == "ok"
+        replaceExisting = approved and props.existingLocationAction == "replace"
+    end)
+    return approved, replaceExisting
 end
 
 return M
