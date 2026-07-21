@@ -92,6 +92,19 @@ local function splitTabs(line)
     return values
 end
 
+local function containsOnlyFileNotFoundErrors(stderr)
+    if not stderr or stderr == "" then return false end
+    local foundError = false
+    for line in stderr:gmatch("[^\r\n]+") do
+        if line:match("^%s*Error: File not found %- ") then
+            foundError = true
+        elseif line:match("%S") then
+            return false
+        end
+    end
+    return foundError
+end
+
 local function readBatch(photos, executable)
     local argPath, jsonPath, errorPath = tempPath(".args.txt"), tempPath(".tsv"), tempPath(".error.txt")
     local lines = {
@@ -135,7 +148,8 @@ local function readBatch(photos, executable)
     if LrFileUtils.exists(errorPath) then LrFileUtils.delete(errorPath) end
     if wrapperPath and LrFileUtils.exists(wrapperPath) then LrFileUtils.delete(wrapperPath) end
 
-    if status ~= 0 or not json then
+    local missingFilesOnly = status ~= 0 and containsOnlyFileNotFoundErrors(stderr)
+    if (status ~= 0 and not missingFilesOnly) or not json then
         return nil, "ExifTool failed.\n\nExit status: " .. tostring(status)
             .. "\nExecutable: " .. tostring(executable)
             .. "\nDetails: " .. tostring(stderr or "No diagnostic output was produced.")
@@ -168,6 +182,10 @@ end
 function M.read(photos, progress)
     local executable, version = discoverExifTool()
     if not executable then
+        if not WIN_ENV then
+            return nil, "ExifTool was not found. Install it with Homebrew by running this command in Terminal:\n\n"
+                .. "brew install exiftool\n\nThen run the sync again."
+        end
         return nil, "ExifTool was not found. Expected the bundled executable at:\n"
             .. tostring(version) .. "\n\nReload the plug-in after confirming that file exists."
     end
