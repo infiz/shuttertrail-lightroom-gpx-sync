@@ -23,21 +23,36 @@ shuttertrail-lightroom-gpx-sync is a Lightroom Classic plug-in that geotags sele
   - macOS: install ExifTool separately and make it available at `/usr/local/bin/exiftool`, `/opt/homebrew/bin/exiftool`, or on `PATH`. You may alternatively place it at `shuttertrail-lightroom-gpx-sync.lrplugin/bin/macos/exiftool`.
 - GPX tracks whose timestamps include `Z` or an explicit numeric UTC offset.
 
-## Installation
+## Set up the plug-in
 
 1. Download or clone this repository.
-2. Keep the entire `shuttertrail-lightroom-gpx-sync.lrplugin` folder in a permanent location. Do not move or remove files inside it.
-3. In Lightroom Classic, open **File > Plug-In Manager**.
-4. Select **Add**, choose the `shuttertrail-lightroom-gpx-sync.lrplugin` folder, and confirm that the plug-in is enabled.
+2. Keep the entire `shuttertrail-lightroom-gpx-sync.lrplugin` folder in a permanent location. The plug-in needs the code and bundled support files inside this folder, so do not move or remove them individually.
+3. Open Lightroom Classic and choose **File > Plug-In Manager**.
+4. Select **Add** in the Plug-In Manager.
+5. Browse to and select the `shuttertrail-lightroom-gpx-sync.lrplugin` folder.
+6. Confirm that `shuttertrail-lightroom-gpx-sync` appears in the Plug-In Manager and is enabled.
 
-## Usage
+### Reload after an upgrade
 
-1. In Lightroom Classic's Library module, select the photos to geotag.
+1. Close any open shuttertrail-lightroom-gpx-sync dialogs.
+2. Replace the existing plug-in files with the files from the new version. Keep the upgraded folder at the same location and retain the name `shuttertrail-lightroom-gpx-sync.lrplugin`.
+3. In Lightroom Classic, choose **File > Plug-In Manager**.
+4. Select `shuttertrail-lightroom-gpx-sync` in the list.
+5. Select **Reload Plug-in**. If Lightroom does not show the updated version, restart Lightroom Classic.
+
+## Use the plug-in
+
+1. In Lightroom Classic's Library module, select the photos you want to geotag. Video files in the selection are ignored.
 2. Choose **Library > Plug-in Extras > Sync selected photos with GPX...**.
-3. Select one or more GPX files.
-4. Supply a UTC offset if prompted for photos that do not contain timezone metadata.
-5. Review the proposed matches. Existing GPS data is preserved by default; choose the replacement option only when you intend to overwrite it.
-6. Apply the accepted matches to the Lightroom catalog.
+3. In the file picker, select one or more `.gpx` files and choose **Use GPX Files**. The plug-in searches all supplied files for the closest timestamped point.
+4. If a selected photo has no embedded UTC offset, enter an offset such as `-07:00`, then choose how broadly it should be used:
+   - **All remaining photos without an embedded offset** applies it to every remaining photo that needs an offset.
+   - **Remaining photos from this camera** applies it only to remaining photos from the same camera.
+   - **This photo only** applies it once and prompts again for the next photo without an offset.
+   - **Skip All Photos Without Offset** leaves the current and all remaining photos without embedded offsets unmatched.
+5. Review the match preview, including coordinates, altitude, time difference, and any unmatched photos.
+6. Existing GPS data is preserved by default. Enable the replacement option only if you intend to overwrite it.
+7. Confirm the preview to apply the accepted matches to the Lightroom catalog, or cancel without making catalog changes.
 
 Lightroom controls whether catalog GPS changes are subsequently written to JPEG or DNG files, or to XMP sidecars for RAW files.
 
