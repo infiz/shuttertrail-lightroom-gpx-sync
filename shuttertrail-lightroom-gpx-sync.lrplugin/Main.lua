@@ -41,9 +41,28 @@ local function validEmbeddedOffset(value)
     return TimeUtil.normalizeOffset(value)
 end
 
+local function summarizeDetectedOffsets(records)
+    local counts = {}
+    for _, record in ipairs(records) do
+        local offset = validEmbeddedOffset(record.embeddedOffset)
+        if offset then counts[offset] = (counts[offset] or 0) + 1 end
+    end
+
+    local summary = {}
+    for offset, count in pairs(counts) do
+        summary[#summary + 1] = { offset = offset, count = count }
+    end
+    table.sort(summary, function(left, right)
+        if left.count ~= right.count then return left.count > right.count end
+        return left.offset < right.offset
+    end)
+    return summary, summary[1] and summary[1].offset or nil
+end
+
 local function calculateResults(records, points, progress)
     local results = {}
     local globalOffset, cameraOffsets, skipRemaining = nil, {}, false
+    local offsetSummary, mostDetectedOffset = summarizeDetectedOffsets(records)
 
     for index, record in ipairs(records) do
         if progress and progress:isCanceled() then return nil, true end
@@ -56,7 +75,10 @@ local function calculateResults(records, points, progress)
         local offsetSource = offset and ("EXIF " .. offset) or nil
 
         if not offset then
-            if globalOffset then
+            if mostDetectedOffset then
+                offset = mostDetectedOffset
+                offsetSource = "most detected " .. mostDetectedOffset
+            elseif globalOffset then
                 offset, offsetSource = globalOffset, "user (all) " .. globalOffset
             elseif cameraOffsets[record.cameraKey] then
                 offset = cameraOffsets[record.cameraKey]
@@ -93,7 +115,7 @@ local function calculateResults(records, points, progress)
             end
         end
     end
-    return results, false
+    return results, false, offsetSummary
 end
 
 LrTasks.startAsyncTask(function()
@@ -155,14 +177,15 @@ LrTasks.startAsyncTask(function()
     Logger.info(string.format("ExifTool %s read %d photos; parsed %d GPX points",
         tostring(exifVersion), #records, #points))
 
-    local results, canceled = calculateResults(records, points, progress)
+    local results, canceled, offsetSummary = calculateResults(records, points, progress)
     if canceled then
         progress:done()
         return
     end
     progress:setCaption("Waiting for preview confirmation…")
     progress:setPortionComplete(95, 100)
-    local approved, replaceExisting = PreviewDialog.show(results, #gpxPaths, #points, selectionSummary)
+    local approved, replaceExisting = PreviewDialog.show(
+        results, #gpxPaths, #points, selectionSummary, offsetSummary)
     if not approved then
         progress:done()
         return
