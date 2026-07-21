@@ -7,11 +7,11 @@ local TimeUtil = require "TimeUtil"
 
 local M = {}
 
-function M.ask(record, remainingCount)
+function M.ask(record, remainingCount, suggestedOffset)
     local selectedOffset, selectedScope, cancelled
     LrFunctionContext.callWithContext("shuttertrail-lightroom-gpx-sync-offset-dialog", function(context)
         local props = LrBinding.makePropertyTable(context)
-        props.offset = "+00:00"
+        props.offset = suggestedOffset or "+00:00"
         props.scope = remainingCount > 1 and "all" or "one"
 
         local f = LrView.osFactory()

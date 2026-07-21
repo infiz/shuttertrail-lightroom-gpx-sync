@@ -81,10 +81,18 @@ function M.show(results, gpxCount, pointCount, selectionSummary, offsetSummary)
         f:static_text { title = "Photo time offsets", font = "<system/bold>" },
         countRow("With an offset stored in the photo", withEmbeddedOffset),
         countRow("Without an offset stored in the photo", withoutEmbeddedOffset),
+<<<<<<< HEAD
         f:static_text { title = "Detected offsets and counts:" },
         f:static_text { title = table.concat(detectedOffsetLines, "\n"), width = 440 },
         countRow("Using the most detected offset", usingMostDetectedOffset),
         countRow("Using an offset you entered", usingManualOffset),
+||||||| parent of ae72682 (Suggest detected offsets for missing metadata)
+        countRow("Using an offset you entered", usingManualOffset),
+=======
+        f:static_text { title = "Detected offsets and counts:" },
+        f:static_text { title = table.concat(detectedOffsetLines, "\n"), width = 440 },
+        countRow("Using an offset confirmed in the prompt", usingManualOffset),
+>>>>>>> ae72682 (Suggest detected offsets for missing metadata)
         countRow("Skipped because no offset was provided", skippedWithoutManualOffset),
 
         f:static_text { title = " " },

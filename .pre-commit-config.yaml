@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: normalize-line-endings
+        name: Normalize text files to LF
+        entry: bash .githooks/normalize-line-endings
+        language: system
+        types: [text]

@@ -84,7 +84,8 @@ local function calculateResults(records, points, progress)
                 offset = cameraOffsets[record.cameraKey]
                 offsetSource = "user (camera) " .. offset
             elseif not skipRemaining then
-                local selected, scope = OffsetDialog.ask(record, #records - index + 1)
+                local selected, scope = OffsetDialog.ask(
+                    record, #records - index + 1, mostDetectedOffset)
                 if selected then
                     offset = selected
                     offsetSource = "user " .. selected
