@@ -5,10 +5,11 @@ local TimeUtil = require "TimeUtil"
 
 local M = {}
 
-function M.show(results, gpxCount, pointCount, selectionSummary)
+function M.show(results, gpxCount, pointCount, selectionSummary, offsetSummary)
     local matched, matchedWithExistingLocation = 0, 0
     local withEmbeddedOffset, withoutEmbeddedOffset = 0, 0
     local usingManualOffset, skippedWithoutManualOffset = 0, 0
+    local usingMostDetectedOffset = 0
     for _, item in ipairs(results) do
         if item.match then
             matched = matched + 1
@@ -24,6 +25,9 @@ function M.show(results, gpxCount, pointCount, selectionSummary)
         if item.offsetSource and item.offsetSource:match("^user") then
             usingManualOffset = usingManualOffset + 1
         end
+        if item.offsetSource and item.offsetSource:match("^most detected") then
+            usingMostDetectedOffset = usingMostDetectedOffset + 1
+        end
         if item.reason == "no UTC offset supplied" then
             skippedWithoutManualOffset = skippedWithoutManualOffset + 1
         end
@@ -36,6 +40,19 @@ function M.show(results, gpxCount, pointCount, selectionSummary)
     }
 
     local matchedWithoutExistingLocation = matched - matchedWithExistingLocation
+    local detectedOffsetLines = {}
+    for index, entry in ipairs(offsetSummary or {}) do
+        local suffix = index == 1 and " (most detected)" or ""
+        detectedOffsetLines[#detectedOffsetLines + 1] = string.format(
+            "%s: %d photo%s%s",
+            entry.offset,
+            entry.count,
+            entry.count == 1 and "" or "s",
+            suffix)
+    end
+    if #detectedOffsetLines == 0 then
+        detectedOffsetLines[1] = "No embedded offsets detected"
+    end
 
     local f = LrView.osFactory()
     local function countRow(label, count, bold)
@@ -64,6 +81,9 @@ function M.show(results, gpxCount, pointCount, selectionSummary)
         f:static_text { title = "Photo time offsets", font = "<system/bold>" },
         countRow("With an offset stored in the photo", withEmbeddedOffset),
         countRow("Without an offset stored in the photo", withoutEmbeddedOffset),
+        f:static_text { title = "Detected offsets and counts:" },
+        f:static_text { title = table.concat(detectedOffsetLines, "\n"), width = 440 },
+        countRow("Using the most detected offset", usingMostDetectedOffset),
         countRow("Using an offset you entered", usingManualOffset),
         countRow("Skipped because no offset was provided", skippedWithoutManualOffset),
 

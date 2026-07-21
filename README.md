@@ -2,15 +2,22 @@
 
 By [Shutter Trail](https://infiz.github.io/shuttertrail-pages/).
 
-shuttertrail-lightroom-gpx-sync is a Lightroom Classic plug-in that geotags selected photos by matching their capture times to timestamped points in one or more GPX tracks. It accounts for timezone offsets and subsecond metadata, previews proposed matches, and updates the Lightroom catalog without modifying original photo files.
+shuttertrail-lightroom-gpx-sync is a Lightroom Classic plug-in that geotags selected photos by matching their capture times to timestamped points in one or more GPX tracks. It accounts for timezone offsets and subsecond metadata, summarizes the matching results, and updates the Lightroom catalog without modifying original photo files.
+
+## Why use this plug-in?
+
+Lightroom Classic's native GPX track-log workflow does not automatically detect the UTC offsets embedded in individual photos. Instead, it requires the user to provide a manual offset when matching photo capture times to a GPX track. This can be inconvenient and can produce incorrect matches when a selection contains photos with different offsets.
+
+shuttertrail-lightroom-gpx-sync reads embedded photo offsets through ExifTool, reports the offsets it detects, and automatically fills missing photo offsets with the most-used offset found in the selection. This reduces the amount of offset information the user must enter manually. Manual offset entry is required only when none of the selected photos provides a usable offset.
 
 ## Features
 
 - Matches each photo to the nearest GPX point before or after its capture time.
 - Reads `DateTimeOriginal`, `SubSecTimeOriginal`, and `OffsetTimeOriginal` through ExifTool.
-- Prompts for a UTC offset when a photo does not contain one, with options to reuse it by camera or for the remaining selection.
+- Automatically fills missing photo offsets with the most-used embedded UTC offset detected in the selected photos.
+- Prompts for a UTC offset when none of the selected photos contains one, with options to reuse it by camera or for the remaining selection.
 - Searches across multiple GPX files and accepts matches up to one hour away.
-- Previews coordinates, altitude, time difference, and any matching issues before applying changes.
+- Shows summary statistics for the matching results before applying changes.
 - Preserves existing GPS metadata unless replacement is explicitly selected.
 - Shows progress while reading metadata, matching tracks, and updating the catalog.
 - Writes latitude, longitude, and available altitude to the Lightroom catalog only.
@@ -20,17 +27,24 @@ shuttertrail-lightroom-gpx-sync is a Lightroom Classic plug-in that geotags sele
 - Adobe Lightroom Classic with Lightroom SDK 6.0 support or newer.
 - ExifTool:
   - Windows: a portable ExifTool runtime is included with the plug-in.
-  - macOS: install ExifTool separately and make it available at `/usr/local/bin/exiftool`, `/opt/homebrew/bin/exiftool`, or on `PATH`. You may alternatively place it at `shuttertrail-lightroom-gpx-sync.lrplugin/bin/macos/exiftool`.
+  - macOS: install [ExifTool with Homebrew](https://formulae.brew.sh/formula/exiftool) before setting up the plug-in:
+
+    ```sh
+    brew install exiftool
+    ```
+
+    If Homebrew is not installed, install it from [brew.sh](https://brew.sh/) first.
 - GPX tracks whose timestamps include `Z` or an explicit numeric UTC offset.
 
 ## Set up the plug-in
 
 1. Download or clone this repository.
 2. Keep the entire `shuttertrail-lightroom-gpx-sync.lrplugin` folder in a permanent location. The plug-in needs the code and bundled support files inside this folder, so do not move or remove them individually.
-3. Open Lightroom Classic and choose **File > Plug-In Manager**.
-4. Select **Add** in the Plug-In Manager.
-5. Browse to and select the `shuttertrail-lightroom-gpx-sync.lrplugin` folder.
-6. Confirm that `shuttertrail-lightroom-gpx-sync` appears in the Plug-In Manager and is enabled.
+3. On macOS, open Terminal and run `brew install exiftool`. Windows users can skip this step because ExifTool is bundled.
+4. Open Lightroom Classic and choose **File > Plug-In Manager**.
+5. Select **Add** in the Plug-In Manager.
+6. Browse to and select the `shuttertrail-lightroom-gpx-sync.lrplugin` folder.
+7. Confirm that `shuttertrail-lightroom-gpx-sync` appears in the Plug-In Manager and is enabled.
 
 ### Reload after an upgrade
 
@@ -45,14 +59,14 @@ shuttertrail-lightroom-gpx-sync is a Lightroom Classic plug-in that geotags sele
 1. In Lightroom Classic's Library module, select the photos you want to geotag. Video files in the selection are ignored.
 2. Choose **Library > Plug-in Extras > Sync selected photos with GPX...**.
 3. In the file picker, select one or more `.gpx` files and choose **Use GPX Files**. The plug-in searches all supplied files for the closest timestamped point.
-4. If a selected photo has no embedded UTC offset, enter an offset such as `-07:00`, then choose how broadly it should be used:
+4. If some photos have embedded UTC offsets, the plug-in uses the most frequently detected offset for photos without one. The results summary lists every detected offset and its photo count. If no selected photo has an embedded offset, enter an offset such as `-07:00`, then choose how broadly it should be used:
    - **All remaining photos without an embedded offset** applies it to every remaining photo that needs an offset.
    - **Remaining photos from this camera** applies it only to remaining photos from the same camera.
    - **This photo only** applies it once and prompts again for the next photo without an offset.
    - **Skip All Photos Without Offset** leaves the current and all remaining photos without embedded offsets unmatched.
-5. Review the match preview, including coordinates, altitude, time difference, and any unmatched photos.
+5. Review the matching statistics, including selected-file counts, offset counts, matched-photo counts, and existing-location counts. Individual photo matches are not shown.
 6. Existing GPS data is preserved by default. Enable the replacement option only if you intend to overwrite it.
-7. Confirm the preview to apply the accepted matches to the Lightroom catalog, or cancel without making catalog changes.
+7. Confirm the results summary to apply the matches to the Lightroom catalog, or cancel without making catalog changes.
 
 Lightroom controls whether catalog GPS changes are subsequently written to JPEG or DNG files, or to XMP sidecars for RAW files.
 
