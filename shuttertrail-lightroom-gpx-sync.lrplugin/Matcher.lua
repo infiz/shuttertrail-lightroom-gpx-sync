@@ -16,13 +16,17 @@ function M.closest(points, epoch, maximumSeconds)
 
     local before = hi >= 1 and points[hi] or nil
     local after = lo <= #points and points[lo] or nil
-    local selected
+    local selected, selectedIndex
 
     if before and after then
         local db, da = math.abs(epoch - before.epoch), math.abs(after.epoch - epoch)
-        selected = db <= da and before or after -- earlier point wins exact ties
+        if db <= da then
+            selected, selectedIndex = before, hi -- earlier point wins exact ties
+        else
+            selected, selectedIndex = after, lo
+        end
     else
-        selected = before or after
+        selected, selectedIndex = before or after, before and hi or lo
     end
 
     local difference = math.abs(epoch - selected.epoch)
@@ -30,15 +34,12 @@ function M.closest(points, epoch, maximumSeconds)
         return nil, "closest GPX point is " .. math.floor(difference / 60) .. " minutes away", difference
     end
 
-    -- Equal timestamps at different locations are ambiguous.
-    local index
-    for i = math.max(1, lo - 2), math.min(#points, lo + 2) do
-        if points[i] == selected then index = i break end
-    end
-    if index then
-        local left, right = points[index - 1], points[index + 1]
-        if (left and left.epoch == selected.epoch and not sameLocation(left, selected))
-            or (right and right.epoch == selected.epoch and not sameLocation(right, selected)) then
+    -- Reject any conflicting location in the complete equal-timestamp range.
+    local first, last = selectedIndex, selectedIndex
+    while first > 1 and points[first - 1].epoch == selected.epoch do first = first - 1 end
+    while last < #points and points[last + 1].epoch == selected.epoch do last = last + 1 end
+    for index = first, last do
+        if not sameLocation(points[index], selected) then
             return nil, "conflicting GPX locations share the same timestamp", difference
         end
     end

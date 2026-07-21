@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+for file in "$@"; do
+    [[ -f "$file" ]] || continue
+
+    # pre-commit filters binary files, but keep this guard so the script is
+    # also safe when invoked directly.
+    if LC_ALL=C grep -Iq . "$file" && LC_ALL=C grep -q $'\r$' "$file"; then
+        sed -i 's/\r$//' "$file"
+        printf 'Normalized line endings: %s\n' "$file"
+    fi
+done

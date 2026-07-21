@@ -4,18 +4,22 @@ By [Shutter Trail](https://infiz.github.io/shuttertrail-pages/).
 
 shuttertrail-lightroom-gpx-sync is a Lightroom Classic plug-in that geotags selected photos by matching their capture times to timestamped points in one or more GPX tracks. It accounts for timezone offsets and subsecond metadata, summarizes the matching results, and updates the Lightroom catalog without modifying original photo files.
 
+## Download
+
+[Download the latest `main` branch as a ZIP](https://github.com/infiz/shuttertrail-lightroom-gpx-sync/archive/refs/heads/main.zip).
+
 ## Why use this plug-in?
 
 Lightroom Classic's native GPX track-log workflow does not automatically detect the UTC offsets embedded in individual photos. Instead, it requires the user to provide a manual offset when matching photo capture times to a GPX track. This can be inconvenient and can produce incorrect matches when a selection contains photos with different offsets.
 
-shuttertrail-lightroom-gpx-sync reads embedded photo offsets through ExifTool, reports the offsets it detects, and automatically fills missing photo offsets with the most-used offset found in the selection. This reduces the amount of offset information the user must enter manually. Manual offset entry is required only when none of the selected photos provides a usable offset.
+shuttertrail-lightroom-gpx-sync reads embedded photo offsets through ExifTool and reports the offsets it detects. When a photo has no embedded offset, the plug-in asks the user which offset to use and prefills the input with the most-used offset found in the selection. The user can accept the suggestion, change it, choose how broadly to reuse it, or skip photos without offsets.
 
 ## Features
 
 - Matches each photo to the nearest GPX point before or after its capture time.
 - Reads `DateTimeOriginal`, `SubSecTimeOriginal`, and `OffsetTimeOriginal` through ExifTool.
-- Automatically fills missing photo offsets with the most-used embedded UTC offset detected in the selected photos.
-- Prompts for a UTC offset when none of the selected photos contains one, with options to reuse it by camera or for the remaining selection.
+- Prompts when a photo has no embedded UTC offset and prefills the prompt with the most-used detected offset.
+- Lets the user change the suggested offset, reuse it by camera or for the remaining selection, or skip photos without offsets.
 - Searches across multiple GPX files and accepts matches up to one hour away.
 - Shows summary statistics for the matching results before applying changes.
 - Preserves existing GPS metadata unless replacement is explicitly selected.
@@ -59,7 +63,7 @@ shuttertrail-lightroom-gpx-sync reads embedded photo offsets through ExifTool, r
 1. In Lightroom Classic's Library module, select the photos you want to geotag. Video files in the selection are ignored.
 2. Choose **Library > Plug-in Extras > Sync selected photos with GPX...**.
 3. In the file picker, select one or more `.gpx` files and choose **Use GPX Files**. The plug-in searches all supplied files for the closest timestamped point.
-4. If some photos have embedded UTC offsets, the plug-in uses the most frequently detected offset for photos without one. The results summary lists every detected offset and its photo count. If no selected photo has an embedded offset, enter an offset such as `-07:00`, then choose how broadly it should be used:
+4. When a photo has no embedded UTC offset, the plug-in opens an offset prompt. If offsets were detected in other selected photos, the most-used offset is filled in as the suggested value; otherwise the prompt starts with `+00:00`. Accept the suggestion or enter an offset such as `-07:00`, then choose how broadly it should be used:
    - **All remaining photos without an embedded offset** applies it to every remaining photo that needs an offset.
    - **Remaining photos from this camera** applies it only to remaining photos from the same camera.
    - **This photo only** applies it once and prompts again for the next photo without an offset.

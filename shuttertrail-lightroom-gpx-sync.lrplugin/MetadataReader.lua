@@ -61,14 +61,14 @@ local function discoverExifTool()
 
     for index, candidate in ipairs(candidates) do
         if index > 1 then
-        local output = tempPath(".version.txt")
-        local command = quote(candidate) .. " -ver > " .. quote(output) .. " 2>&1"
-        local status = LrTasks.execute(command)
-        local version = readFile(output)
-        if LrFileUtils.exists(output) then LrFileUtils.delete(output) end
-        if status == 0 and version and version:match("%d+%.%d+") then
-            return candidate, version:match("%d+%.%d+")
-        end
+            local output = tempPath(".version.txt")
+            local command = quote(candidate) .. " -ver > " .. quote(output) .. " 2>&1"
+            local status = LrTasks.execute(command)
+            local version = readFile(output)
+            if LrFileUtils.exists(output) then LrFileUtils.delete(output) end
+            if status == 0 and version and version:match("%d+%.%d+") then
+                return candidate, version:match("%d+%.%d+")
+            end
         end
     end
     return nil, bundled
@@ -92,30 +92,12 @@ local function splitTabs(line)
     return values
 end
 
-local function offsetFromTimestamp(value)
-    if not value then return nil end
-    return tostring(value):match("([+-]%d%d:?%d%d)$")
-        or tostring(value):match("([Zz])$")
-end
-
-local function subsecFromTimestamp(value)
-    if not value then return nil end
-    return tostring(value):match(":%d%d%.(%d+)")
-end
-
-local function usableTimestamp(value)
-    if not value or value == "" or value == "-" then return nil end
-    if tostring(value):match("^0000[:%-]") then return nil end
-    return value
-end
-
 local function readBatch(photos, executable)
     local argPath, jsonPath, errorPath = tempPath(".args.txt"), tempPath(".tsv"), tempPath(".error.txt")
     local lines = {
         "-T", "-n", "-charset", "filename=UTF8",
         "-Directory", "-FileName",
         "-EXIF:DateTimeOriginal", "-EXIF:SubSecTimeOriginal", "-EXIF:OffsetTimeOriginal",
-        "-Keys:CreationDate", "-UserData:DateTimeOriginal", "-QuickTime:CreateDate",
         "-Make", "-Model", "-SerialNumber", "-InternalSerialNumber", "-BodySerialNumber",
     }
     local photoByPath = {}
@@ -165,27 +147,17 @@ local function readBatch(photos, executable)
         local sourceFile = values[1] and values[2] and LrPathUtils.child(values[1], values[2]) or nil
         local photo = sourceFile and photoByPath[standardized(sourceFile)] or nil
         if photo then
-            local isVideo = photo:getRawMetadata("isVideo") == true
-            local videoMetadataTime = usableTimestamp(values[6]) or usableTimestamp(values[7]) or usableTimestamp(values[8])
-            local captureTime = isVideo
-                and (videoMetadataTime or photo:getRawMetadata("dateTimeOriginalISO8601"))
-                or values[3]
-            local subsec = isVideo and subsecFromTimestamp(captureTime) or values[4]
-            local embeddedOffset = values[5] or (videoMetadataTime and offsetFromTimestamp(videoMetadataTime))
-            local serial = values[11] or values[13] or values[12]
+            local serial = values[8] or values[10] or values[9]
             result[#result + 1] = {
                 photo = photo,
-                path = sourceFile,
                 fileName = LrPathUtils.leafName(sourceFile),
-                captureTime = captureTime,
-                subsec = subsec,
-                embeddedOffset = embeddedOffset,
-                make = values[9],
-                model = values[10],
-                serial = serial,
-                cameraKey = table.concat({ values[9] or "", values[10] or "", serial or "" }, "|"),
+                captureTime = values[3],
+                subsec = values[4],
+                embeddedOffset = values[5],
+                make = values[6],
+                model = values[7],
+                cameraKey = table.concat({ values[6] or "", values[7] or "", serial or "" }, "|"),
                 existingGps = photo:getRawMetadata("gps"),
-                isVideo = isVideo,
             }
         end
     end
