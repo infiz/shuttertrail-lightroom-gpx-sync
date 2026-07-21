@@ -1,0 +1,11 @@
+ExifTool
+========
+
+This product bundles the Windows executable distribution of ExifTool 13.58.
+
+ExifTool is Copyright 2003-2026, Phil Harvey.
+ExifTool is free software and may be redistributed under the same terms as Perl itself.
+
+Project and license information:
+https://exiftool.org/
+https://dev.perl.org/licenses/

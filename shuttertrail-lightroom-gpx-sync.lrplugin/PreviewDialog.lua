@@ -1,0 +1,96 @@
+local LrDialogs = import "LrDialogs"
+local LrView = import "LrView"
+
+local TimeUtil = require "TimeUtil"
+
+local M = {}
+
+function M.show(results, gpxCount, pointCount, selectionSummary)
+    local matched, matchedWithExistingLocation = 0, 0
+    local withEmbeddedOffset, withoutEmbeddedOffset = 0, 0
+    local usingManualOffset, skippedWithoutManualOffset = 0, 0
+    for _, item in ipairs(results) do
+        if item.match then
+            matched = matched + 1
+            if item.record.existingGps then
+                matchedWithExistingLocation = matchedWithExistingLocation + 1
+            end
+        end
+        if TimeUtil.normalizeOffset(item.record.embeddedOffset) then
+            withEmbeddedOffset = withEmbeddedOffset + 1
+        else
+            withoutEmbeddedOffset = withoutEmbeddedOffset + 1
+        end
+        if item.offsetSource and item.offsetSource:match("^user") then
+            usingManualOffset = usingManualOffset + 1
+        end
+        if item.reason == "no UTC offset supplied" then
+            skippedWithoutManualOffset = skippedWithoutManualOffset + 1
+        end
+    end
+
+    selectionSummary = selectionSummary or {
+        totalSelected = #results,
+        photoCount = #results,
+        videoCount = 0,
+    }
+
+    local matchedWithoutExistingLocation = matched - matchedWithExistingLocation
+
+    local f = LrView.osFactory()
+    local function countRow(label, count, bold)
+        return f:row {
+            spacing = f:control_spacing(),
+            f:static_text { title = label, width = 380 },
+            f:static_text {
+                title = tostring(count),
+                width = 60,
+                alignment = "right",
+                font = bold and "<system/bold>" or nil,
+            },
+        }
+    end
+
+    local contents = f:column {
+        spacing = f:control_spacing(),
+        width = 470,
+
+        f:static_text { title = "Selected files", font = "<system/bold>" },
+        countRow("Total files selected", selectionSummary.totalSelected),
+        countRow("Photos", selectionSummary.photoCount),
+        countRow("Videos (ignored)", selectionSummary.videoCount),
+
+        f:static_text { title = " " },
+        f:static_text { title = "Photo time offsets", font = "<system/bold>" },
+        countRow("With an offset stored in the photo", withEmbeddedOffset),
+        countRow("Without an offset stored in the photo", withoutEmbeddedOffset),
+        countRow("Using an offset you entered", usingManualOffset),
+        countRow("Skipped because no offset was provided", skippedWithoutManualOffset),
+
+        f:static_text { title = " " },
+        f:static_text { title = "GPX matching results", font = "<system/bold>" },
+        countRow("Photos with a matching GPX location", matched, true),
+        countRow("Matched photos that already have a location", matchedWithExistingLocation),
+        countRow("Matched photos that do not have a location yet", matchedWithoutExistingLocation, true),
+
+        f:static_text { title = " " },
+        f:static_text { title = "What each action will do", font = "<system/bold>" },
+        countRow("Apply and Preserve Existing — photos updated", matchedWithoutExistingLocation, true),
+        countRow("Apply and Replace Existing — photos updated", matched, true),
+        f:static_text {
+            title = "Only matches no more than one hour from a GPX point will be applied.",
+        },
+    }
+
+    local answer = LrDialogs.presentModalDialog {
+        title = "shuttertrail-lightroom-gpx-sync — Preview",
+        contents = contents,
+        actionVerb = "Apply and Preserve Existing",
+        otherVerb = matchedWithExistingLocation > 0 and "Apply and Replace Existing" or nil,
+        cancelVerb = "Cancel",
+        resizable = true,
+    }
+    return answer == "ok" or answer == "other", answer == "other"
+end
+
+return M
