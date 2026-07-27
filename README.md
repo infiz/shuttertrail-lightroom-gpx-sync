@@ -6,7 +6,7 @@ shuttertrail-lightroom-gpx-sync is a Lightroom Classic plug-in that geotags sele
 
 ## Download
 
-[Download the latest `main` branch as a ZIP](https://github.com/infiz/shuttertrail-lightroom-gpx-sync/archive/refs/heads/main.zip).
+[Download the latest release](https://github.com/infiz/shuttertrail-lightroom-gpx-sync/releases/latest).
 
 ## Why use this plug-in?
 
