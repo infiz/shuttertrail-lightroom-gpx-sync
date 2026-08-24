@@ -97,6 +97,51 @@ The plug-in finds the closest GPX point across all selected tracks. A match is r
 
 For support, contact [shuttertrail.support@gmail.com](mailto:shuttertrail.support@gmail.com).
 
+## Standalone desktop application
+
+Development has started on **ShutterTrail Geotagger**, a Windows and macOS desktop application for people who do not use Lightroom Classic. It previews timestamp matches and writes verified GPS metadata directly into supported RAW and JPEG files. The original Lightroom Classic plug-in remains available and unchanged.
+
+The desktop source is under `apps/desktop` and currently supports JPEG, DNG, CR2, CR3, NEF/NRW, ARW, RAF, RW2, ORF, PEF, and SRW as an explicit preview allowlist. Its decisions follow the Lightroom Classic plug-in's Preview flow:
+
+1. Use the single **Add photo files or folders** action, or drag any mixture of photo files and folders into the app. Dropped items are added to the current selection and folders are searched recursively. Discovery skips symbolic links, hidden directories, legacy `.shuttertrail-backups` folders, and visible `ShutterTrail Backups` folders. Select GPX tracks normally or drag `.gpx` files directly onto the GPX card.
+2. In Step 03, set the maximum time-difference safety window and choose **Preview matches**. The app shows progress while it loads tracks and metadata. If a photo has no embedded UTC offset, the same prompt as the plug-in suggests the most-used detected offset and can apply it to all remaining photos, the same camera, or only that photo; Skip omits all remaining photos without an offset. Matching then continues automatically with its own progress bar.
+3. In the completed preview, choose whether to preserve or replace matched existing locations, just as in the plug-in's Preview dialog, then choose **Apply**. No file is changed before this final action.
+
+Every write creates a byte-for-byte backup in a visible `ShutterTrail Backups/<job-id>` folder beside the source photo before ExifTool modifies the embedded EXIF GPS fields. Each backup keeps the original filename and extension, so the files inside a job folder can be copied directly back into the source folder to restore them.
+
+### Run the desktop app for development
+
+Requirements:
+
+- Rust and Cargo
+- Node.js and npm
+- ExifTool available on `PATH`, or `SHUTTERTRAIL_EXIFTOOL` set to its executable
+
+```sh
+cd apps/desktop
+npm install
+npm run tauri -- dev
+```
+
+### Build installation packages
+
+Windows builds use the ExifTool distribution already bundled with the Lightroom plug-in and produce an NSIS installer:
+
+```bat
+scripts\build_windows_package.bat
+```
+
+macOS builds stage the Homebrew ExifTool distribution into the application and produce a DMG. The final public package should be built with Developer ID signing and notarization credentials configured in the build environment.
+
+```sh
+brew install exiftool
+scripts/build_mac_package.sh
+```
+
+Set `SHUTTERTRAIL_MAC_TARGET` to a Rust target such as `aarch64-apple-darwin` or `x86_64-apple-darwin` to place the build under that target directory.
+
+Both packaging scripts copy their finished installer into the repository-level `dist` folder. macOS produces a `.dmg`; Windows produces an NSIS `.exe`.
+
 ## License
 
 The project is licensed under the [Apache License 2.0](LICENSE). The bundled Windows ExifTool distribution has its own licensing terms; see [`THIRD_PARTY_NOTICES.txt`](shuttertrail-lightroom-gpx-sync.lrplugin/THIRD_PARTY_NOTICES.txt).
