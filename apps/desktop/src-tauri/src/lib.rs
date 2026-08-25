@@ -38,6 +38,12 @@ impl AppState {
             operation_progress: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+
+    fn shutdown(&self) {
+        if let Ok(mut exiftool) = self.exiftool.lock() {
+            exiftool.shutdown();
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -1222,7 +1228,7 @@ fn unique_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
 fn normalized_path_key(path: &Path) -> String {
     let value = path.to_string_lossy().to_string();
     if cfg!(target_os = "windows") {
-        value.to_ascii_lowercase()
+        value.replace('\\', "/").to_ascii_lowercase()
     } else {
         value
     }
@@ -1279,7 +1285,7 @@ fn sha256(path: &Path) -> Result<Vec<u8>, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
@@ -1296,8 +1302,14 @@ pub fn run() {
             clear_operation_progress,
             quit_application
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running ShutterTrail Geotagger");
+        .build(tauri::generate_context!())
+        .expect("error while building ShutterTrail Geotagger");
+
+    app.run(|app_handle, event| {
+        if matches!(event, tauri::RunEvent::Exit) {
+            app_handle.state::<AppState>().shutdown();
+        }
+    });
 }
 
 #[cfg(test)]
@@ -1374,5 +1386,17 @@ mod tests {
         assert_eq!(metadata_scan_percent(100, 100), 95);
         assert_eq!(completed_percent(7, 12), 58);
         assert_eq!(completed_percent(12, 12), 100);
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn matches_exiftool_windows_paths_with_forward_slashes() {
+        let selected_path = Path::new(r"C:\Users\Photographer\Pictures\DSC08891.ARW");
+        let exiftool_path = Path::new("C:/Users/Photographer/Pictures/DSC08891.ARW");
+
+        assert_eq!(
+            normalized_path_key(selected_path),
+            normalized_path_key(exiftool_path)
+        );
     }
 }

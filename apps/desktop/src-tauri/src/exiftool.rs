@@ -1,10 +1,14 @@
 use serde_json::Value;
 use std::env;
 use std::io::{BufRead, BufReader, Write};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 const READY_PREFIX: &str = "{ready";
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 pub struct ExifToolManager {
     candidates: Vec<PathBuf>,
@@ -92,6 +96,10 @@ impl ExifToolManager {
     pub fn version(&mut self) -> Result<String, String> {
         self.execute(&["-ver".into()])
             .map(|value| value.trim().to_string())
+    }
+
+    pub fn shutdown(&mut self) {
+        self.process = None;
     }
 
     pub fn read_json(&mut self, paths: &[PathBuf]) -> Result<Vec<Value>, String> {
@@ -192,13 +200,15 @@ struct ExifToolProcess {
 
 impl ExifToolProcess {
     fn start(executable: &Path) -> Result<Self, String> {
-        let mut child = Command::new(executable)
+        let mut command = Command::new(executable);
+        command
             .args(["-config", "", "-stay_open", "True", "-@", "-"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|error| error.to_string())?;
+            .stderr(Stdio::null());
+        #[cfg(target_os = "windows")]
+        command.creation_flags(CREATE_NO_WINDOW);
+        let mut child = command.spawn().map_err(|error| error.to_string())?;
         let stdin = child
             .stdin
             .take()
@@ -295,6 +305,8 @@ mod tests {
         let object = metadata[0].as_object().unwrap();
         assert!((object["GPSLatitude"].as_f64().unwrap() - 37.7749).abs() < 0.000001);
         assert!((object["GPSLongitude"].as_f64().unwrap() + 122.4194).abs() < 0.000001);
+        manager.shutdown();
+        assert!(manager.process.is_none());
 
         fs::remove_file(target).unwrap();
     }

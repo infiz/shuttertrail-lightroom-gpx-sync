@@ -13,14 +13,31 @@ where cargo >nul 2>nul || (
   echo ERROR: Rust and Cargo are required.
   exit /b 1
 )
+where rustc >nul 2>nul || (
+  echo ERROR: The Rust compiler is required.
+  exit /b 1
+)
 where node >nul 2>nul || (
   echo ERROR: Node.js is required.
+  exit /b 1
+)
+where npm >nul 2>nul || (
+  echo ERROR: npm is required.
   exit /b 1
 )
 
 if not exist "%SOURCE_EXIFTOOL%\exiftool.exe" (
   echo ERROR: Bundled ExifTool was not found at:
   echo   %SOURCE_EXIFTOOL%\exiftool.exe
+  exit /b 1
+)
+if not exist "%SOURCE_EXIFTOOL%\exiftool_files\exiftool.pl" (
+  echo ERROR: The bundled ExifTool support files were not found at:
+  echo   %SOURCE_EXIFTOOL%\exiftool_files
+  exit /b 1
+)
+"%SOURCE_EXIFTOOL%\exiftool.exe" -ver >nul 2>nul || (
+  echo ERROR: The bundled ExifTool runtime could not be started.
   exit /b 1
 )
 
@@ -38,6 +55,7 @@ call npm run check || goto :failed
 cargo test --manifest-path src-tauri\Cargo.toml || goto :failed
 
 echo Building Windows NSIS installer...
+if exist "%BUNDLE_ROOT%" rmdir /s /q "%BUNDLE_ROOT%" || goto :failed
 call npm run tauri -- build --bundles nsis || goto :failed
 
 echo Collecting Windows package...
@@ -63,6 +81,7 @@ exit /b 0
 
 :failed
 set "BUILD_EXIT=%ERRORLEVEL%"
+if "%BUILD_EXIT%"=="0" set "BUILD_EXIT=1"
 popd
 echo ERROR: Windows package build failed.
 exit /b %BUILD_EXIT%
