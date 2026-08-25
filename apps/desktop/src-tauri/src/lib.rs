@@ -1303,7 +1303,7 @@ pub fn run() {
             quit_application
         ])
         .build(tauri::generate_context!())
-        .expect("error while building ShutterTrail Geotagger");
+        .expect("error while building ShutterTrail GeoTagger");
 
     app.run(|app_handle, event| {
         if matches!(event, tauri::RunEvent::Exit) {

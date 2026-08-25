@@ -26,6 +26,13 @@ where npm >nul 2>nul || (
   exit /b 1
 )
 
+for /f "usebackq delims=" %%V in (`node "%ROOT_DIR%\scripts\geotagger_build_version.mjs"`) do set "BUILD_VERSION=%%V"
+if not defined BUILD_VERSION (
+  echo ERROR: Could not read the ShutterTrail GeoTagger build version.
+  exit /b 1
+)
+set "OUTPUT_PACKAGE=%DIST_DIR%\ShutterTrail-GeoTagger-%BUILD_VERSION%-Windows-x64-Setup.exe"
+
 if not exist "%SOURCE_EXIFTOOL%\exiftool.exe" (
   echo ERROR: Bundled ExifTool was not found at:
   echo   %SOURCE_EXIFTOOL%\exiftool.exe
@@ -61,9 +68,9 @@ call npm run tauri -- build --bundles nsis || goto :failed
 echo Collecting Windows package...
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%" || goto :failed
 set "PACKAGE_FOUND="
-for %%F in ("%BUNDLE_ROOT%\*.exe") do (
+for %%F in ("%BUNDLE_ROOT%\*_%BUILD_VERSION%_*.exe") do (
   if exist "%%~fF" (
-    copy /y "%%~fF" "%DIST_DIR%\" >nul || goto :failed
+    copy /y "%%~fF" "%OUTPUT_PACKAGE%" >nul || goto :failed
     set "PACKAGE_FOUND=1"
   )
 )
@@ -74,8 +81,8 @@ if not defined PACKAGE_FOUND (
 )
 
 echo.
-echo Windows package copied to:
-echo   %DIST_DIR%
+echo Windows package:
+echo   %OUTPUT_PACKAGE%
 popd
 exit /b 0
 

@@ -45,6 +45,7 @@
   let showPhotoSourceMenu = false;
   let dragOverPhotos = false;
   let dragOverGpx = false;
+  let nativeDragPaths: string[] = [];
   let photoDropArea: HTMLElement | null = null;
   let gpxDropArea: HTMLElement | null = null;
   let reviewProgress: ReviewProgress | null = null;
@@ -70,7 +71,7 @@
   $: operationCountLabel = busyAction === "write" ? "photos processed" : "photos scanned";
   $: operationHint = busyAction === "write"
     ? "Each photo is backed up and verified before continuing."
-    : "Keep ShutterTrail open while the selected files are checked.";
+    : "Keep ShutterTrail GeoTagger open while the selected files are checked.";
 
   const photoExtensions = [
     "jpg", "jpeg", "dng", "cr2", "cr3", "nef", "nrw", "arw", "raf", "rw2", "orf", "pef", "srw"
@@ -138,26 +139,37 @@
   onMount(() => {
     let unlisten: (() => void) | undefined;
     getCurrentWindow().onDragDropEvent(({ payload }) => {
-      if (payload.type === "enter" || payload.type === "over") {
-        const dropEnabled = !busy && !offsetPromptItem;
-        dragOverPhotos = dropEnabled && isPointInside(payload.position, photoDropArea);
-        dragOverGpx = dropEnabled && isPointInside(payload.position, gpxDropArea);
+      if (payload.type === "enter") {
+        nativeDragPaths = payload.paths;
+        updateNativeDragTarget(payload.position);
+      } else if (payload.type === "over") {
+        updateNativeDragTarget(payload.position);
       } else if (payload.type === "leave") {
         dragOverPhotos = false;
         dragOverGpx = false;
+        nativeDragPaths = [];
       } else if (payload.type === "drop") {
+        const paths = payload.paths.length ? payload.paths : nativeDragPaths;
         const droppedOnPhotos = isPointInside(payload.position, photoDropArea);
         const droppedOnGpx = isPointInside(payload.position, gpxDropArea);
         dragOverPhotos = false;
         dragOverGpx = false;
+        nativeDragPaths = [];
         if (!busy && !offsetPromptItem) {
-          if (droppedOnGpx) addDroppedGpx(payload.paths);
-          else if (droppedOnPhotos) void loadPhotoRoots(payload.paths, true, "drop");
+          if (paths.some(isGpxPath) || droppedOnGpx) addDroppedGpx(paths);
+          else if (droppedOnPhotos) void loadPhotoRoots(paths, true, "drop");
         }
       }
     }).then((stop) => unlisten = stop);
     return () => unlisten?.();
   });
+
+  function updateNativeDragTarget(position: PhysicalPosition) {
+    const dropEnabled = !busy && !offsetPromptItem;
+    const containsGpx = nativeDragPaths.some(isGpxPath);
+    dragOverPhotos = dropEnabled && !containsGpx && isPointInside(position, photoDropArea);
+    dragOverGpx = dropEnabled && (containsGpx || isPointInside(position, gpxDropArea));
+  }
 
   function isPointInside(position: PhysicalPosition, element: HTMLElement | null) {
     if (!element) return false;
@@ -167,8 +179,12 @@
       && logical.y >= bounds.top && logical.y <= bounds.bottom;
   }
 
+  function isGpxPath(path: string) {
+    return /\.gpx$/i.test(path);
+  }
+
   function addDroppedGpx(paths: string[]) {
-    const accepted = paths.filter((path) => /\.gpx$/i.test(path));
+    const accepted = paths.filter(isGpxPath);
     if (!accepted.length) {
       errorMessage = "Drop one or more .gpx files into the GPX area.";
       activity = "The GPX drop did not contain a GPX file.";
@@ -550,7 +566,7 @@
 </script>
 
 <svelte:head>
-  <title>ShutterTrail Geotagger</title>
+  <title>ShutterTrail GeoTagger</title>
 </svelte:head>
 
 <main>
@@ -560,7 +576,7 @@
     </div>
     <div>
       <p class="eyebrow">SHUTTERTRAIL</p>
-      <h1>ShutterTrail Geotagger</h1>
+      <h1>ShutterTrail GeoTagger</h1>
       <p class="lede">Match photo times to GPX tracks, review the results, then write embedded GPS.</p>
     </div>
     <div class="direct-write-note">
@@ -819,9 +835,9 @@
         {/if}
         {#if applyResult}
           <div class="write-bar completion-bar">
-            <div><strong>What would you like to do next?</strong><span>Start a fresh geotagging session or close ShutterTrail.</span></div>
+            <div><strong>What would you like to do next?</strong><span>Start a fresh geotagging session or close ShutterTrail GeoTagger.</span></div>
             <div class="completion-buttons">
-              <button class="secondary" type="button" on:click={quitApplication}>Quit ShutterTrail</button>
+              <button class="secondary" type="button" on:click={quitApplication}>Quit ShutterTrail GeoTagger</button>
               <button class="primary write" type="button" on:click={startNewSession}>Geotag more photos</button>
             </div>
           </div>
@@ -883,7 +899,7 @@
     <div class="operation-backdrop" role="dialog" aria-modal="true" aria-labelledby="operation-title" aria-describedby="operation-status">
       <div class="operation-card">
         <div class="operation-symbol" aria-hidden="true"><span></span><span></span><span></span></div>
-        <p class="eyebrow">SHUTTERTRAIL IS WORKING</p>
+        <p class="eyebrow">SHUTTERTRAIL GEOTAGGER IS WORKING</p>
         <h2 id="operation-title">{operationTitle}</h2>
         {#if busyAction === "write" && operationProgress.fileName}
           <div class="operation-current-file">
@@ -910,6 +926,7 @@
       <p>{errorMessage || activity}</p>
     </div>
     <nav class="footer-links" aria-label="ShutterTrail links">
+      <span class="build-version" title="ShutterTrail GeoTagger build version">Build {__SHUTTERTRAIL_GEOTAGGER_BUILD_VERSION__}</span>
       <button type="button" on:click={() => openExternal(productPageUrl)} aria-label="Open the ShutterTrail product page in your browser">
         Product page <span aria-hidden="true">↗</span>
       </button>
