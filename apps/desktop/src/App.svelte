@@ -43,8 +43,9 @@
   let activity = "Select photos and one or more GPX tracks to begin.";
   let errorMessage = "";
   let showPhotoSourceMenu = false;
-  let dragActive = false;
+  let dragOverPhotos = false;
   let dragOverGpx = false;
+  let photoDropArea: HTMLElement | null = null;
   let gpxDropArea: HTMLElement | null = null;
   let reviewProgress: ReviewProgress | null = null;
   let previewProgress: ReviewProgress | null = null;
@@ -138,18 +139,20 @@
     let unlisten: (() => void) | undefined;
     getCurrentWindow().onDragDropEvent(({ payload }) => {
       if (payload.type === "enter" || payload.type === "over") {
-        dragActive = !busy && !offsetPromptItem;
-        dragOverGpx = dragActive && isPointInside(payload.position, gpxDropArea);
+        const dropEnabled = !busy && !offsetPromptItem;
+        dragOverPhotos = dropEnabled && isPointInside(payload.position, photoDropArea);
+        dragOverGpx = dropEnabled && isPointInside(payload.position, gpxDropArea);
       } else if (payload.type === "leave") {
-        dragActive = false;
+        dragOverPhotos = false;
         dragOverGpx = false;
       } else if (payload.type === "drop") {
+        const droppedOnPhotos = isPointInside(payload.position, photoDropArea);
         const droppedOnGpx = isPointInside(payload.position, gpxDropArea);
-        dragActive = false;
+        dragOverPhotos = false;
         dragOverGpx = false;
         if (!busy && !offsetPromptItem) {
           if (droppedOnGpx) addDroppedGpx(payload.paths);
-          else void loadPhotoRoots(payload.paths, true, "drop");
+          else if (droppedOnPhotos) void loadPhotoRoots(payload.paths, true, "drop");
         }
       }
     }).then((stop) => unlisten = stop);
@@ -270,7 +273,7 @@
     applyResult = null;
     errorMessage = "";
     showPhotoSourceMenu = false;
-    dragActive = false;
+    dragOverPhotos = false;
     dragOverGpx = false;
     reviewProgress = null;
     previewProgress = null;
@@ -577,7 +580,7 @@
   <section class="workspace">
     <div class="setup-column">
       {#if !sourceReview || !offsetResolutionComplete}
-        <article class="panel selection-panel">
+        <article class="panel selection-panel photo-drop-area" class:drag-target={dragOverPhotos} bind:this={photoDropArea}>
         <div class="panel-heading">
           <span class="step-number">01</span>
           <div><h2>Choose photographs</h2><p>Select files directly or scan one or more folders recursively.</p></div>
@@ -591,7 +594,7 @@
             <button type="button" on:click={choosePhotoFolders}><strong>Choose folders recursively</strong><span>Find supported photos in every subfolder.</span></button>
           </div>
         {/if}
-        <div class="drop-hint" class:active={dragActive && !dragOverGpx}><strong>Or drop photo files and folders here</strong><span>Mixed drops are supported and added to the current selection.</span></div>
+        <div class="drop-hint" class:active={dragOverPhotos}><strong>Or drop photo files and folders here</strong><span>Mixed drops are supported and added to the current selection.</span></div>
         {#if photoPaths.length}
           <div class="file-list">
             <div class="file-list-toolbar">
@@ -898,16 +901,6 @@
         </div>
         <small>{operationHint}</small>
       </div>
-    </div>
-  {/if}
-
-  {#if dragActive}
-    <div class="drag-overlay" class:gpx-target={dragOverGpx} aria-hidden="true">
-      {#if dragOverGpx}
-        <div><strong>Drop GPX files</strong><span>The tracks will be added to the current GPX selection.</span></div>
-      {:else}
-        <div><strong>Drop photos or folders</strong><span>Folders will be searched recursively. Existing selections will be kept.</span></div>
-      {/if}
     </div>
   {/if}
 
