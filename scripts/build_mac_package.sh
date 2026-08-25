@@ -20,6 +20,20 @@ command -v node >/dev/null 2>&1 || {
   echo "ERROR: Node.js is required." >&2
   exit 1
 }
+
+BUILD_VERSION=$(node "$SCRIPT_DIR/geotagger_build_version.mjs")
+MAC_BUILD_TARGET=${SHUTTERTRAIL_MAC_TARGET:-$(uname -m)}
+case "$MAC_BUILD_TARGET" in
+  aarch64-*|arm64) MAC_ARCH_LABEL="Apple-Silicon" ;;
+  x86_64-*|x86_64) MAC_ARCH_LABEL="Intel" ;;
+  universal-apple-darwin) MAC_ARCH_LABEL="Universal" ;;
+  *)
+    echo "ERROR: Unsupported macOS build architecture: $MAC_BUILD_TARGET" >&2
+    exit 1
+    ;;
+esac
+OUTPUT_PACKAGE="$DIST_DIR/ShutterTrail-GeoTagger-$BUILD_VERSION-macOS-$MAC_ARCH_LABEL.dmg"
+
 command -v brew >/dev/null 2>&1 || {
   echo "ERROR: Homebrew is required to stage a redistributable ExifTool layout." >&2
   exit 1
@@ -100,9 +114,9 @@ fi
 echo "Collecting macOS package..."
 mkdir -p "$DIST_DIR"
 PACKAGE_FOUND=0
-for PACKAGE in "$BUNDLE_ROOT"/*.dmg; do
+for PACKAGE in "$BUNDLE_ROOT"/*_"$BUILD_VERSION"_*.dmg; do
   if [ -f "$PACKAGE" ]; then
-    cp "$PACKAGE" "$DIST_DIR/"
+    cp "$PACKAGE" "$OUTPUT_PACKAGE"
     PACKAGE_FOUND=1
   fi
 done
@@ -112,5 +126,5 @@ if [ "$PACKAGE_FOUND" -ne 1 ]; then
 fi
 
 echo
-echo "macOS package copied to:"
-echo "  $DIST_DIR"
+echo "macOS package:"
+echo "  $OUTPUT_PACKAGE"

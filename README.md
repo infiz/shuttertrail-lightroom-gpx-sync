@@ -99,7 +99,7 @@ For support, contact [shuttertrail.support@gmail.com](mailto:shuttertrail.suppor
 
 ## Standalone desktop application
 
-Development has started on **ShutterTrail Geotagger**, a Windows and macOS desktop application for people who do not use Lightroom Classic. It previews timestamp matches and writes verified GPS metadata directly into supported RAW and JPEG files. The original Lightroom Classic plug-in remains available and unchanged.
+Development has started on **ShutterTrail GeoTagger**, a Windows and macOS desktop application for people who do not use Lightroom Classic. It previews timestamp matches and writes verified GPS metadata directly into supported RAW and JPEG files. The original Lightroom Classic plug-in remains available and unchanged.
 
 The desktop source is under `apps/desktop` and currently supports JPEG, DNG, CR2, CR3, NEF/NRW, ARW, RAF, RW2, ORF, PEF, and SRW as an explicit preview allowlist. Its decisions follow the Lightroom Classic plug-in's Preview flow:
 
@@ -125,6 +125,8 @@ npm run tauri -- dev
 
 ### Build installation packages
 
+The desktop build version is defined in `apps/desktop/BUILD_VERSION`. Keep the matching version fields in `apps/desktop/package.json` and `apps/desktop/src-tauri/tauri.conf.json` synchronized; packaging stops with an error if they differ. The version is shown in the app footer and included in every installer filename.
+
 Windows builds use the ExifTool distribution already bundled with the Lightroom plug-in and produce an NSIS installer:
 
 ```bat
@@ -140,7 +142,7 @@ scripts/build_mac_package.sh
 
 Set `SHUTTERTRAIL_MAC_TARGET` to a Rust target such as `aarch64-apple-darwin` or `x86_64-apple-darwin` to place the build under that target directory.
 
-Both packaging scripts copy their finished installer into the repository-level `dist` folder. macOS produces a `.dmg`; Windows produces an NSIS `.exe`.
+Both packaging scripts copy their finished installer into the repository-level `dist` folder. For build `1.0.0`, the filenames are `ShutterTrail-GeoTagger-1.0.0-macOS-Apple-Silicon.dmg` (or `macOS-Intel`/`macOS-Universal`) and `ShutterTrail-GeoTagger-1.0.0-Windows-x64-Setup.exe`.
 
 ## License
 
