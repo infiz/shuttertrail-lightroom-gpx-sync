@@ -13,6 +13,7 @@ local PreviewDialog = require "PreviewDialog"
 local TimeUtil = require "TimeUtil"
 
 local MAXIMUM_DIFFERENCE_SECONDS = 60 * 60
+local PRODUCT_NAME = "ShutterTrail GeoTagger"
 
 local function withoutVideos(items)
     local photos = {}
@@ -26,8 +27,8 @@ end
 
 local function chooseGpxFiles()
     return LrDialogs.runOpenPanel {
-        title = "Choose one or more GPX files",
-        prompt = "Use GPX Files",
+        title = PRODUCT_NAME .. " — Choose GPX Tracks",
+        prompt = "Use GPX Tracks",
         canChooseFiles = true,
         canChooseDirectories = false,
         canCreateDirectories = false,
@@ -85,12 +86,12 @@ LrTasks.startAsyncTask(function()
         videoCount = #selectedItems - #photos,
     }
     if not photos or #photos == 0 then
-        LrDialogs.message("shuttertrail-lightroom-gpx-sync", "No still photos are selected. Video files are currently ignored.", "info")
+        LrDialogs.message(PRODUCT_NAME, "No still photos are selected. Video files are currently ignored.", "info")
         return
     end
 
     local progress = LrProgressScope {
-        title = "shuttertrail-lightroom-gpx-sync",
+        title = PRODUCT_NAME,
         caption = "Reading GPX tracks…",
     }
     progress:setCancelable(true)
@@ -137,7 +138,11 @@ LrTasks.startAsyncTask(function()
     end
     progress:setCaption("Waiting for preview confirmation…")
     progress:setPortionComplete(95, 100)
-    local approved, replaceExisting = PreviewDialog.show(results, selectionSummary, offsetSummary)
+    local approved, replaceExisting = PreviewDialog.show(results, selectionSummary, offsetSummary, {
+        gpxFileCount = #gpxPaths,
+        trackPointCount = #points,
+        maximumDifferenceSeconds = MAXIMUM_DIFFERENCE_SECONDS,
+    })
     if not approved then
         progress:done()
         return
@@ -155,5 +160,5 @@ LrTasks.startAsyncTask(function()
     if #parseErrors > 0 then
         message = message .. "\n\nGPX warnings: " .. #parseErrors
     end
-    LrDialogs.message("shuttertrail-lightroom-gpx-sync complete", message, #failures > 0 and "warning" or "info")
+    LrDialogs.message(PRODUCT_NAME .. " Complete", message, #failures > 0 and "warning" or "info")
 end)

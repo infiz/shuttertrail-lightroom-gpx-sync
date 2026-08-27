@@ -142,7 +142,7 @@ scripts/build_mac_package.sh
 
 Set `SHUTTERTRAIL_MAC_TARGET` to a Rust target such as `aarch64-apple-darwin` or `x86_64-apple-darwin` to place the build under that target directory.
 
-Both packaging scripts copy their finished installer into the repository-level `dist` folder. For build `1.0.0`, the filenames are `ShutterTrail-GeoTagger-1.0.0-macOS-Apple-Silicon.dmg` (or `macOS-Intel`/`macOS-Universal`) and `ShutterTrail-GeoTagger-1.0.0-Windows-x64-Setup.exe`.
+Both packaging scripts copy their finished installer into the repository-level `dist` folder. For build `1.0.1`, the filenames are `ShutterTrail-GeoTagger-1.0.1-macOS-Apple-Silicon.dmg` (or `macOS-Intel`/`macOS-Universal`) and `ShutterTrail-GeoTagger-1.0.1-Windows-x64-Setup.exe`.
 
 ## License
 

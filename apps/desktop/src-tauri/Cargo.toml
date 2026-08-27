@@ -1,6 +1,6 @@
 [package]
 name = "shuttertrail-geotagger"
-version = "1.0.0"
+version = "1.0.1"
 description = "Write GPX locations directly into photo metadata"
 authors = ["ShutterTrail"]
 edition = "2024"

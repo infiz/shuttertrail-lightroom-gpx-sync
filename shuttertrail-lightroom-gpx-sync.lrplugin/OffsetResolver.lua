@@ -25,6 +25,14 @@ local function summarize(records)
     return summary
 end
 
+local function countMissingOffsets(records)
+    local count = 0
+    for _, record in ipairs(records) do
+        if not normalizedEmbeddedOffset(record) then count = count + 1 end
+    end
+    return count
+end
+
 function M.new(records)
     local summary = summarize(records)
     local state = {
@@ -32,18 +40,25 @@ function M.new(records)
         suggestedOffset = summary[1] and summary[1].offset or nil,
         cameraOffsets = {},
         skipRemaining = false,
+        missingCount = countMissingOffsets(records),
+        missingProcessed = 0,
     }
 
     function state:resolve(record, remainingCount)
         local embedded = normalizedEmbeddedOffset(record)
         if embedded then return embedded, "EXIF " .. embedded end
+        self.missingProcessed = self.missingProcessed + 1
         if self.globalOffset then return self.globalOffset, "user (all) " .. self.globalOffset end
 
         local cameraOffset = self.cameraOffsets[record.cameraKey]
         if cameraOffset then return cameraOffset, "user (camera) " .. cameraOffset end
         if self.skipRemaining then return nil end
 
-        local selected, scope = OffsetDialog.ask(record, remainingCount, self.suggestedOffset)
+        local selected, scope = OffsetDialog.ask(record, remainingCount, self.suggestedOffset, {
+            current = self.missingProcessed,
+            total = self.missingCount,
+            suggestedCount = summary[1] and summary[1].count or 0,
+        })
         if not selected then
             self.skipRemaining = true
             return nil
