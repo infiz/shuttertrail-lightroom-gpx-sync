@@ -14,7 +14,7 @@ shuttertrail-lightroom-gpx-sync matches selected Lightroom Classic photos to the
 - Ignores video files; video timestamp handling is not enabled in this release.
 - Shows Lightroom-native progress for metadata reading, matching, and catalog writes.
 - Reports processed-item and total counts while reading metadata in ExifTool batches.
-- Provides a vertically and horizontally scrollable match preview.
+- Provides a vertically scrollable match preview with per-photo status details.
 - Allows cancellation before catalog writing begins.
 - Never edits original photo files directly.
 
