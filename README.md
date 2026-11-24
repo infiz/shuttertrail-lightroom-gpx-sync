@@ -1,6 +1,6 @@
 # shuttertrail-lightroom-gpx-sync
 
-By [Shutter Trail](https://infiz.github.io/shuttertrail-pages/).
+By [Shutter Trail](https://apps.infiz.com/shuttertrail/).
 
 shuttertrail-lightroom-gpx-sync is a Lightroom Classic plug-in that geotags selected photos by matching their capture times to timestamped points in one or more GPX tracks. It accounts for timezone offsets and subsecond metadata, summarizes the matching results, and updates the Lightroom catalog without modifying original photo files.
 
